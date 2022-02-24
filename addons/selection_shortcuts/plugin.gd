@@ -15,9 +15,11 @@ var target_node_paths = {}
 # ******************************************************************************
 
 func get_plugin_name():
-	return "SelectionShortcuts"
+	return 'SelectionShortcuts'
 
 func _enter_tree():
+	name = 'SelectionShortcuts'
+
 	add_setting(shortcut_setting_name, TYPE_STRING, move_selection_shortcut)
 	for n in numbers:
 		target_node_paths[n] = ''
