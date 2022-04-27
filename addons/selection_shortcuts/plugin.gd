@@ -40,7 +40,10 @@ func settings_changed():
 func find_viewport_2d(node: Node, recursive_level):
 	if node.get_class() == "CanvasItemEditor":
 		canvas_item_editor = node
-		return node.get_child(1).get_child(0).get_child(0).get_child(0).get_child(0)
+		var viewport = node.get_child(1).get_child(0).get_child(0).get_child(0).get_child(0)
+		if !viewport.has_method('get_mouse_position'):
+			viewport = viewport.get_child(0)
+		return viewport
 	else:
 		recursive_level += 1
 		if recursive_level > 15:
@@ -223,4 +226,3 @@ func load_json(path, default=null):
 		if parse.result is Dictionary:
 			result = parse.result
 	return result
-
