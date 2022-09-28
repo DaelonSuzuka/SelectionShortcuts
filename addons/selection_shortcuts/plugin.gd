@@ -6,8 +6,6 @@ extends EditorPlugin
 const settings_prefix = "interface/selection_shortcuts/"
 var move_selection_shortcut = 'Control+F'
 var shortcut_setting_name = 'move_selection_keybind'
-onready var canvas_item_editor = null
-onready var editor_viewport = find_viewport_2d(get_node("/root/EditorNode"), 0)
 
 var numbers := ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
 var target_node_paths = {}
@@ -36,22 +34,6 @@ func settings_changed():
 	move_selection_shortcut = settings.get_setting(settings_prefix + shortcut_setting_name)
 	for n in numbers:
 		target_node_paths[n] = settings.get_setting(settings_prefix + 'target_node_path' + n)
-
-func find_viewport_2d(node: Node, recursive_level):
-	if node.get_class() == "CanvasItemEditor":
-		canvas_item_editor = node
-		var viewport = node.get_child(1).get_child(0).get_child(0).get_child(0).get_child(0)
-		if !viewport.has_method('get_mouse_position'):
-			viewport = viewport.get_child(0)
-		return viewport
-	else:
-		recursive_level += 1
-		if recursive_level > 15:
-			return null
-		for child in node.get_children():
-			var result = find_viewport_2d(child, recursive_level)
-			if result != null:
-				return result
 
 func get_selected_nodes():
 	return get_editor_interface().get_selection().get_selected_nodes()
@@ -166,14 +148,14 @@ func move_object_to_cursor():
 	
 	if targets.size() == 0:
 		return
-	
+
 	var undo = get_undo_redo()
 	if targets.size() == 1:
 		var target = targets[0]
 
 		undo.create_action('Move "%s" to %s' % [target.name, str(target.global_position)])
 		undo.add_undo_property(target, 'global_position', target.global_position)
-		target.global_position = editor_viewport.get_mouse_position()
+		target.global_position = target.get_viewport().get_mouse_position()
 		undo.add_do_property(target, 'global_position', target.global_position)
 		undo.commit_action()
 
@@ -183,7 +165,7 @@ func move_object_to_cursor():
 			center += target.global_position
 
 		center /= targets.size()
-		var destination = editor_viewport.get_mouse_position()
+		var destination = targets[0].get_viewport().get_mouse_position()
 
 		undo.create_action('Move selection to %s' % [str(destination)])
 		var offset = destination - center
