@@ -8,6 +8,9 @@ var move_selection_shortcut = 'Control+F'
 var shortcut_setting_name = 'move_selection_keybind'
 
 var numbers := ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+var save_keybind_prefix = 'Control+'
+var find_keybind_prefix = 'Shift+'
+var save_find_keybind_prefix = 'Control+Shift+'
 var target_node_paths = {}
 
 # ******************************************************************************
@@ -19,21 +22,27 @@ func _enter_tree():
 	name = 'SelectionShortcuts'
 
 	add_setting(shortcut_setting_name, TYPE_STRING, move_selection_shortcut)
+	add_setting('save_keybind_prefix', TYPE_STRING, save_keybind_prefix)
+	add_setting('find_keybind_prefix', TYPE_STRING, find_keybind_prefix)
+	add_setting('save_find_keybind_prefix', TYPE_STRING, save_find_keybind_prefix)
 	for n in numbers:
 		target_node_paths[n] = ''
 		add_setting('target_node_path' + n, TYPE_STRING, '')
 
-	build_keybinds()
 	settings_changed()
 	saved_paths = load_json('selection_shortcuts.json', {})
 	var settings = get_editor_interface().get_editor_settings()
 	settings.connect('settings_changed', self, 'settings_changed')
 
 func settings_changed():
-	var settings = get_editor_interface().get_editor_settings()
-	move_selection_shortcut = settings.get_setting(settings_prefix + shortcut_setting_name)
+	move_selection_shortcut = get_setting(shortcut_setting_name)
+	save_keybind_prefix = get_setting('save_keybind_prefix')
+	find_keybind_prefix = get_setting('find_keybind_prefix')
+	save_find_keybind_prefix = get_setting('save_find_keybind_prefix')
 	for n in numbers:
-		target_node_paths[n] = settings.get_setting(settings_prefix + 'target_node_path' + n)
+		target_node_paths[n] = get_setting('target_node_path' + n)
+
+	build_keybinds()
 
 func get_selected_nodes():
 	return get_editor_interface().get_selection().get_selected_nodes()
@@ -65,9 +74,9 @@ func build_keybinds():
 	save_find_keybinds.clear()
 	for n in numbers:
 		select_keybinds.append(n)
-		save_keybinds.append('Control+' + n)
-		find_keybinds.append('Shift+' + n)
-		save_find_keybinds.append('Control+Shift+' + n)
+		save_keybinds.append(save_keybind_prefix + n)
+		find_keybinds.append(find_keybind_prefix + n)
+		save_find_keybinds.append(save_find_keybind_prefix + n)
 
 func _input(event):
 	if !(event is InputEventKey):
@@ -120,20 +129,26 @@ func _input(event):
 		get_tree().set_input_as_handled()
 		if n in target_node_paths:
 			var root = get_editor_interface().get_edited_scene_root()
-			var node = root.get_node_or_null(target_node_paths[n])
-			if node:
+			var nodes = []
+			var paths = target_node_paths[n]
+			if ', ' in paths:
+				for path in paths.split(', '):
+					nodes.append(root.get_node_or_null(path))
+			else:
+				nodes = [root.get_node_or_null(paths)]
+			if nodes:
 				get_editor_interface().get_selection().clear()
-				get_editor_interface().get_selection().add_node(node)
+				for node in nodes:
+					if node:
+						get_editor_interface().get_selection().add_node(node)
 		return
 
 	if event.as_text() in save_find_keybinds:
 		get_tree().set_input_as_handled()
 		var selected = get_selected_node_paths()
-		if len(selected) == 1:
-			var path = selected[0]
-			target_node_paths[n] = path
-			var settings = get_editor_interface().get_editor_settings()
-			settings.set('target_node_path' + n, path)
+		var paths = PoolStringArray(selected).join(', ')
+		target_node_paths[n] = paths
+		set_setting('target_node_path' + n, paths)
 		return
 
 # ******************************************************************************
@@ -188,6 +203,16 @@ func add_setting(_name:String, type, value):
 		"type": type
 	}
 	settings.add_property_info(property_info)
+
+func set_setting(_name:String, value):
+	var name = settings_prefix + _name
+	var settings = get_editor_interface().get_editor_settings()
+	settings.set_setting(name, value)
+
+func get_setting(_name:String):
+	var name = settings_prefix + _name
+	var settings = get_editor_interface().get_editor_settings()
+	return settings.get_setting(name)
 
 # ******************************************************************************
 
