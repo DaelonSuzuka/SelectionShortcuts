@@ -13,6 +13,8 @@ var find_keybind_prefix = 'Shift+'
 var save_find_keybind_prefix = 'Control+Shift+'
 var target_node_paths = {}
 
+var active := false
+
 # ******************************************************************************
 
 func get_plugin_name():
@@ -33,6 +35,11 @@ func _enter_tree():
 	saved_paths = load_json('selection_shortcuts.json', {})
 	var settings = get_editor_interface().get_editor_settings()
 	settings.connect('settings_changed', self, 'settings_changed')
+	
+	connect('main_screen_changed', self, '_main_screen_changed')
+
+func _main_screen_changed(screen_name):
+	active = screen_name == '2D'
 
 func settings_changed():
 	move_selection_shortcut = get_setting(shortcut_setting_name)
@@ -79,6 +86,9 @@ func build_keybinds():
 		save_find_keybinds.append(save_find_keybind_prefix + n)
 
 func _input(event):
+	if !active:
+		return
+
 	if !(event is InputEventKey):
 		return
 
